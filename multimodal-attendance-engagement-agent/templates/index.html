@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="hero">
+  <div><p class="eyebrow">MULTIMODAL CLASSROOM INTELLIGENCE</p><h1>Make every session<br><span>more meaningful.</span></h1>
+  <p class="hero-copy">Manage attendance, review engagement signals, and capture teaching observations — with data stored locally on this device.</p></div>
+  <div class="hero-orb"><div class="orb-inner">CP</div><span class="orb-label">Privacy-first<br>classroom insights</span></div>
+</section>
+<section class="stats">
+  <div class="stat-card"><span>Registered learners</span><strong>{{ total_students }}</strong><small>In your local roster</small></div>
+  <div class="stat-card"><span>Total sessions</span><strong>{{ total_sessions }}</strong><small>Recorded on this device</small></div>
+  <div class="stat-card"><span>Marked present</span><strong>{{ present_today }}</strong><small>{% if active %}Current active session{% else %}No active session{% endif %}</small></div>
+</section>
+<div class="dashboard-grid">
+  <section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">01 / ROSTER</p><h2>Manage learners</h2></div></div>
+    <form class="inline-form" method="post" action="{{ url_for('add_student') }}">
+      <input name="name" placeholder="Student full name" required>
+      <input name="roll_number" placeholder="Roll number / ID" required>
+      <button class="button primary" type="submit">Add learner</button>
+    </form>
+    {% if students %}
+    <div class="table-wrap"><table><thead><tr><th>Learner</th><th>Roll number</th><th></th></tr></thead><tbody>
+    {% for student in students %}<tr><td>{{ student.name }}</td><td><span class="pill">{{ student.roll_number }}</span></td><td><form method="post" action="{{ url_for('delete_student', student_id=student.id) }}" onsubmit="return confirm('Remove this learner and their attendance records?')"><button class="text-button danger-text" type="submit">Remove</button></form></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="empty-state"><span>＋</span><strong>Your roster starts here</strong><p>Add learners to begin taking attendance.</p></div>{% endif %}
+  </section>
+  <section class="panel session-panel">
+    <div class="section-heading"><div><p class="eyebrow">02 / LIVE SESSION</p><h2>Class session</h2></div><span class="status-badge {% if active %}live{% endif %}">{% if active %}● LIVE{% else %}○ READY{% endif %}</span></div>
+    {% if active %}
+      <div class="active-session"><span class="session-icon">▶</span><div><strong>{{ active.title }}</strong><small>Started {{ active.started_at }}</small></div></div>
+      <a class="button primary full" href="{{ url_for('session_detail', session_id=active.id) }}">Open live session <span>↗</span></a>
+      <form method="post" action="{{ url_for('end_session', session_id=active.id) }}" class="end-form"><button class="button secondary full" type="submit">End session</button></form>
+    {% else %}
+      <p class="muted">Start a session to mark attendance and record engagement signals.</p>
+      <form method="post" action="{{ url_for('start_session') }}" class="stack-form"><label>Session title<input name="title" placeholder="e.g. AI Fundamentals — Lecture 04" required></label><button class="button primary full" type="submit">＋ Start new session</button></form>
+    {% endif %}
+    <div class="mini-note"><span>✦</span><p><strong>Assistive, not authoritative.</strong> Review signals with human judgment; never use engagement estimates as a grade or disciplinary decision.</p></div>
+  </section>
+</div>
+<section class="panel history-panel">
+  <div class="section-heading"><div><p class="eyebrow">03 / HISTORY</p><h2>Recent sessions</h2></div></div>
+  {% if sessions %}<div class="history-list">{% for s in sessions %}<a class="history-item" href="{{ url_for('session_detail', session_id=s.id) }}"><span class="history-icon">▤</span><span class="history-title"><strong>{{ s.title }}</strong><small>{{ s.started_at }} · {% if s.ended_at %}Completed{% else %}Active{% endif %}</small></span><span class="history-arrow">↗</span></a>{% endfor %}</div>
+  {% else %}<p class="muted">Your session history will appear here after you start a class.</p>{% endif %}
+</section>
+<div class="disclaimer"><strong>Prototype scope:</strong> Camera analysis counts visible faces only. It does not identify individuals or infer a student's internal mental state. Attendance is confirmed by the instructor.</div>
+{% endblock %}

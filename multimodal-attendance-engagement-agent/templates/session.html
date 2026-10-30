@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ session.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">← Back to dashboard</a>
+<section class="session-hero">
+  <div><p class="eyebrow">SESSION {{ "%04d"|format(session.id) }}</p><h1>{{ session.title }}</h1><p class="muted">Started {{ session.started_at }} · {% if session.ended_at %}Ended {{ session.ended_at }}{% else %}Session in progress{% endif %}</p></div>
+  <a class="button secondary" href="{{ url_for('export_csv', session_id=session.id) }}">↓ Export attendance CSV</a>
+</section>
+<section class="stats compact-stats">
+  <div class="stat-card"><span>Present</span><strong>{{ counts.present or 0 }}</strong></div>
+  <div class="stat-card"><span>Absent</span><strong>{{ counts.absent or 0 }}</strong></div>
+  <div class="stat-card"><span>Late</span><strong>{{ counts.late or 0 }}</strong></div>
+</section>
+<div class="dashboard-grid">
+  <section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">01 / ATTENDANCE</p><h2>Mark attendance</h2></div></div>
+    {% if students %}
+    <form class="stack-form" method="post" action="{{ url_for('mark_attendance', session_id=session.id) }}">
+      <label>Choose learner<select name="student_id" required><option value="">Select from roster…</option>{% for s in students %}<option value="{{ s.id }}">{{ s.name }} — {{ s.roll_number }}</option>{% endfor %}</select></label>
+      <label>Attendance status<select name="status"><option>Present</option><option>Late</option><option>Absent</option></select></label>
+      <button class="button primary full" type="submit">Save attendance</button>
+    </form>
+    {% else %}<p class="muted">Add learners on the dashboard before marking attendance.</p>{% endif %}
+    <div class="table-wrap"><table><thead><tr><th>Learner</th><th>Status</th></tr></thead><tbody>{% for row in attendance %}<tr><td><strong>{{ row.name }}</strong><small class="table-sub">{{ row.roll_number }}</small></td><td><span class="attendance-pill {{ row.status|lower }}">{{ row.status }}</span></td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  <section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">02 / CAMERA ASSIST</p><h2>Room presence check</h2></div><span class="status-badge">ON DEVICE</span></div>
+    <p class="muted">Counts faces in a single camera frame locally. No image is saved or sent to an external service.</p>
+    <div class="camera-box"><video id="camera" autoplay playsinline muted></video><canvas id="capture" hidden></canvas><div id="camera-placeholder" class="camera-placeholder"><span>◉</span><p>Camera preview appears here</p></div></div>
+    <div class="button-row"><button class="button secondary" id="start-camera" type="button">Enable camera</button><button class="button primary" id="analyze-camera" type="button" disabled>Count faces</button></div>
+    <div id="camera-result" class="result-box" aria-live="polite">Camera is off.</div>
+    <p class="fine-print">This is a room-level count, not identity recognition. Confirm each learner's attendance manually.</p>
+  </section>
+</div>
+<section class="dashboard-grid lower-grid">
+  <section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">03 / ENGAGEMENT SIGNALS</p><h2>Record a session signal</h2></div></div>
+    <p class="muted">Record observable events such as an interaction peak, a participation check, or an instructor note. These are contextual observations, not objective measures of attention.</p>
+    <form class="stack-form" method="post" action="{{ url_for('add_event', session_id=session.id) }}">
+      <label>Signal type<select name="event_type"><option>Interaction</option><option>Audio activity</option><option>Attention check</option><option>Instructor note</option></select></label>
+      <label>Signal strength (0–100)<input name="value" type="number" min="0" max="100" value="50"></label>
+      <label>Context / observation<textarea name="note" rows="3" placeholder="e.g. Students asked more questions after the worked example."></textarea></label>
+      <button class="button primary full" type="submit">＋ Save observation</button>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">04 / TEACHING SUPPORT</p><h2>Reflection prompts</h2></div></div>
+    <div class="suggestion"><span>01</span><div><strong>If participation drops</strong><p>Pause and use a quick poll, short question, or pair discussion. Compare with the session's context before drawing conclusions.</p></div></div>
+    <div class="suggestion"><span>02</span><div><strong>If interaction peaks</strong><p>Capture the topic or activity that prompted questions and consider reusing that teaching approach.</p></div></div>
+    <div class="suggestion"><span>03</span><div><strong>Before changing pace</strong><p>Ask learners for direct feedback. Camera movement or silence alone cannot establish attention or understanding.</p></div></div>
+  </section>
+</section>
+<section class="panel history-panel">
+  <div class="section-heading"><div><p class="eyebrow">05 / EVENT LOG</p><h2>Recorded observations</h2></div></div>
+  {% if events %}<div class="event-list">{% for event in events %}<div class="event-item"><span class="event-dot"></span><div class="event-content"><div><strong>{{ event.event_type }}</strong><span class="event-value">{{ event.value|int }}/100</span></div><p>{{ event.note or 'No additional context provided.' }}</p><small>{{ event.created_at }}</small></div></div>{% endfor %}</div>
+  {% else %}<p class="muted">No observations recorded yet.</p>{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.CLASS_PULSE_SESSION = {{ session.id }};
+</script>
+{% endblock %}
